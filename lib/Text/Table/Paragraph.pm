@@ -8,20 +8,13 @@ use strict;
 use warnings;
 #END IFUNBUILT
 
-use Text::Wrap ();
-
-sub _format_line {
-    my ($colname, $val) = @_;
-
-    $val = Text::Wrap::wrap("", "  ", $val);
-    $val =~ s/\R+\z//;
-
-    "$colname: $val\n";
-}
-
 sub table {
+    require Text::Wrap;
+
     my %args = @_;
     my $rows = $args{rows} or die "Must provide rows!";
+
+    my $opt_wrap = $args{wrap} // $ENV{TEXT_TABLE_PARAGRAPH_WRAP} // 1;
 
     my $columns;
     my $data_idx_start;
@@ -33,13 +26,22 @@ sub table {
         $data_idx_start = 0;
     }
 
+    local $Text::Wrap::colums = $args{wrap_width} //
+        $ENV{TEXT_TABLE_PARAGRAPH_WRAP_WIDTH} // 72;
+
     my @output;
 
     for my $i ($data_idx_start .. $#$rows) {
         my $row = $rows->[$i];
         for my $j (0..$#{$columns}) {
             last if $j > $#{$row};
-            push @output, _format_line($columns->[$j], $row->[$j]);
+            my $column = $columns->[$j];
+            my $val = $row->[$j];
+            if ($opt_wrap) {
+                $val = Text::Wrap::wrap("", "  ", $val);
+            }
+            $val =~ s/\R+\z//;
+            push @output, "$column: $val\n";
 	}
         push @output, "\n";
     }
@@ -114,8 +116,24 @@ If given a true value, the first row in the data will be interpreted as a header
 row that contains column names. Otherwise, columns will be named: C<column1>,
 C<column2>, and so on.
 
+=item * wrap (bool, default 1)
+
+Whether to wrap long values.
+
+=item * wrap_width (int, default 72)
+
 =back
 
+
+=head1 ENVIRONMENT
+
+=head2 TEXT_TABLE_PARAGRAPH_WRAP => bool
+
+Set default for C<wrap> option.
+
+=head2 TEXT_TABLE_PARAGRAPH_WRAP_WIDTH => int
+
+Set default for C<wrap_width> option.
 
 =head1 SEE ALSO
 
